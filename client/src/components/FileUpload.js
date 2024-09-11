@@ -4,20 +4,39 @@ import Progress from "./Progress";
 import axios from "axios";
 
 const FileUpload = () => {
-  const [file, setFile] = useState("");
+  const [file, setFile] = useState(null);
   const [filename, setFilename] = useState("Choose File");
   const [uploadedFile, setUploadedFile] = useState({});
   const [message, setMessage] = useState("");
   const [uploadPercentage, setUploadPercentage] = useState(0);
 
+  // Max file size (5 MB in bytes)
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
   const onChange = (e) => {
-    setFile(e.target.files[0]);
-    setFilename(e.target.files[0].name);
+    const selectedFile = e.target.files[0];
+
+    // Validate file size
+    if (selectedFile && selectedFile.size > MAX_FILE_SIZE) {
+      setMessage("File size exceeds the 5 MB limit");
+      setFile(null);
+      setFilename("Choose File");
+      return;
+    }
+
+    setFile(selectedFile);
+    setFilename(selectedFile.name);
+    setMessage("");
   };
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData(); // currently empty object
+    if (!file) {
+      setMessage("Please choose a file before submitting");
+      return;
+    }
+
+    const formData = new FormData();
     formData.append("file", file);
 
     try {
@@ -27,9 +46,7 @@ const FileUpload = () => {
         },
         onUploadProgress: (ProgressEvent) => {
           setUploadPercentage(
-            parseInt(
-              Math.round((ProgressEvent.loaded * 100) / ProgressEvent.total)
-            )
+            parseInt(Math.round((ProgressEvent.loaded * 100) / ProgressEvent.total))
           );
           // Clear percentage
           setTimeout(() => setUploadPercentage(0), 10000);
@@ -37,9 +54,7 @@ const FileUpload = () => {
       });
 
       const { fileName, filePath } = res.data;
-
       setUploadedFile({ fileName, filePath });
-
       setMessage("File Uploaded");
     } catch (err) {
       if (err.response.status === 500) {
